@@ -2,7 +2,7 @@
  * Project_Thema_1_3.asm
  *
  *  Created: 2-4-2015 10:45:15
- *   Author: Joël, Jari
+ *   Author: JoÃ«l, Jari
  */ 
 .org 0x0000
 rjmp init
@@ -77,7 +77,7 @@ loop:
 		rjmp TIMER1_OC_end
 
 	increase_minutes:
-		cpi current_minutes, 60
+		cpi current_minutes, 59
 		breq increase_hours
 		ldi current_seconds, 0x00
 		inc current_minutes
@@ -85,7 +85,7 @@ loop:
 		rjmp TIMER1_OC_end
 
 	increase_seconds:
-		cpi current_seconds, 60
+		cpi current_seconds, 59
 		breq increase minutes
 		inc current_seconds
 		ldi TIMER1_OC, 0x00
