@@ -1,3 +1,4 @@
+.include "m32def.inc"
 /*
  * Project_Thema_1_3.asm
  *
@@ -7,14 +8,16 @@
 .org 0x0000
 rjmp init
 
-.org OC1Aaddr
-rjmp TIMER1_OC_ISR
-
 .org INT0addr
 rjmp BTN_SW0
 
 .org INT1addr
 rjmp BTN_SW1
+
+.org OC1Aaddr
+rjmp TIMER1_OC_ISR
+
+
 
 .cseg
 
@@ -33,6 +36,7 @@ start:
 .endmacro
 
 .def temp = r16
+.def compare = r17
 .def alarm_hours = r18
 .def alarm_minutes = r19
 .def current_hours = r20
@@ -43,14 +47,49 @@ start:
 .def SW1 = r25
 
 init:
+
 	; Set compare to 0xFF to check if registers were set in main loop
 	ldi compare, 0xFF
+	ldi alarm_hours, 0x00
+	ldi alarm_minutes, 0x00
+	ldi current_hours, 0x00
+	ldi current_minutes, 0x00
+	ldi current_seconds, 0x00
+	ldi TIMER1_OC, 0x00
+	ldi SW0, 0x00
+	ldi SW1, 0x00
+
 
 	; Load stackpointer
 	ldi temp, low(RAMEND)
 	out SPL, temp
 	ldi temp, high(RAMEND)
 	out SPH, temp
+
+	ldi r16, (1 << INT1) | (1 << INT0)
+	out GICR, r16
+
+	ldi r16, (1 << ISC00) | (1 << ISC01) | (1 << ISC10) | (1 << ISC11)
+	out MCUCR, r16
+
+	; wgm, clock select
+	ldi r16, (1 << WGM12) | (1 << CS10) | (1 << CS12)
+	out TCCR1B, r16
+
+	ldi r16, high(10800)
+	out OCR1AH, r16
+
+	ldi r16, low(10800)
+	out OCR1AL, r16
+
+	ldi r16, (1 << OCIE1A)
+	out TIMSK, r16
+
+	sei
+
+	ldi r16, 0b1111_1111
+	out DDRB, r16
+
 
 loop:
 	cpse SW0, compare
@@ -86,7 +125,7 @@ loop:
 
 	increase_seconds:
 		cpi current_seconds, 59
-		breq increase minutes
+		breq increase_minutes
 		inc current_seconds
 		ldi TIMER1_OC, 0x00
 		rjmp TIMER1_OC_end
@@ -97,6 +136,7 @@ loop:
 	; out MINUTES, current_minutes
 	; out SECONDS, current_seconds
 
+	out PORTB, current_minutes
 	rjmp loop
 
 TIMER1_OC_ISR:
