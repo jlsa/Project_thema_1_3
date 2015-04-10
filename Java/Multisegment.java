@@ -17,7 +17,7 @@ public class Multisegment {
 	
     public static void main(String[] args) throws Exception {
 	if (args==null || args.length!=1) { 
-	    System.out.println("Usage: java -cp .:RXTXcomm.jar Multisegment <<serial port>> e.g. COM3 or /dev/ttyUSB0");
+	    System.out.println("Usage: java -cp .;RXTXcomm.jar Multisegment <<serial port>> e.g. COM3 or /dev/ttyUSB0");
 	    System.exit(1);
 	}
 
