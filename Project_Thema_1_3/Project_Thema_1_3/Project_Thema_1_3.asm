@@ -17,10 +17,7 @@ rjmp BTN_SW1
 .org OC1Aaddr
 rjmp TIMER1_OC_ISR
 
-
-
 .cseg
-
 
 .def temp = r16
 .def compare = r17
@@ -29,7 +26,7 @@ rjmp TIMER1_OC_ISR
 .def current_hours = r20
 .def current_minutes = r21
 .def current_seconds = r22
-.def TIMER1_OC = r23
+.def interrupts = r23
 .def SW0 = r24
 .def SW1 = r25
 
@@ -42,7 +39,7 @@ init:
 	ldi current_hours, 0x00
 	ldi current_minutes, 0x00
 	ldi current_seconds, 0x00
-	ldi TIMER1_OC, 0x00
+	ldi interrupts, 0x00
 	ldi SW0, 0x00
 	ldi SW1, 0x00
 
@@ -78,19 +75,23 @@ init:
 	out DDRB, r16
 
 loop:
+	ldi temp, (1 << 1)
 	cpse SW0, compare
 	rjmp SW0_end
 	; Do whatever button SW0 should do.
+
 	ldi SW0, 0x00
 	SW0_end:
 
+	ldi temp, (1 << 2)
 	cpse SW1, compare
 	rjmp SW1_end
 	; Do whatever button SW1 should do.
 	ldi SW1, 0x00
 	SW1_end:
 
-	cpse TIMER1_OC, compare
+	ldi temp, (1 << 0)
+	cpse interrupts, temp
 	rjmp TIMER1_OC_end
 	; Do whatever timer1 output compare match should do.
 	rjmp increase_seconds
@@ -98,7 +99,8 @@ loop:
 		ldi current_seconds, 0x00
 		ldi current_minutes, 0x00
 		inc current_hours
-		ldi TIMER1_OC, 0x00
+		;ldi interrupts, 0x00
+		cbr interrupts, 0b0000_0001
 		rjmp TIMER1_OC_end
 
 	increase_minutes:
@@ -106,15 +108,16 @@ loop:
 		breq increase_hours
 		ldi current_seconds, 0x00
 		inc current_minutes
-		ldi TIMER1_OC, 0x00
+		cbr interrupts, 0b0000_0001
+		;ldi interrupts, 0x00
 		rjmp TIMER1_OC_end
 
 	increase_seconds:
 		cpi current_seconds, 59
 		breq increase_minutes
 		inc current_seconds
-		ldi TIMER1_OC, 0x00
-
+		;ldi interrupts, 0x00
+		cbr interrupts, 0b0000_0001
 		rjmp TIMER1_OC_end
 
 	TIMER1_OC_end:
@@ -128,13 +131,13 @@ loop:
 	rjmp loop
 
 TIMER1_OC_ISR:
-	ldi TIMER1_OC, 0xFF
+	ldi interrupts, 0b0000_0001
 	reti
 
 BTN_SW0:
-	ldi SW0, 0xFF
+	ldi interrupts, 0b0000_0010 
 	reti
 
 BTN_SW1:
-	ldi SW1, 0xFF
+	ldi interrupts, 0b0000_0100
 	reti
