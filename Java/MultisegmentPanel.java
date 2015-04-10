@@ -19,7 +19,6 @@ public class MultisegmentPanel extends JFrame {
 	    bSeg[i]=new boolean[7];			
 	}
 	bSeg[6]=new boolean[5];
-
 	setSize(W,H);
 	setVisible(true);  
 	setResizable(false);  
