@@ -21,19 +21,6 @@ rjmp TIMER1_OC_ISR
 
 .cseg
 
-.macro modulo
-ldi temp, 0x00
-rjmp start
-decrease:
-	inc temp
-	subi @0, @1
-	rjmp start
-start:
-	cpi @0, @1
-	brge decrease
-	push temp
-	push @0
-.endmacro
 
 .def temp = r16
 .def compare = r17
@@ -90,7 +77,6 @@ init:
 	ldi r16, 0b1111_1111
 	out DDRB, r16
 
-
 loop:
 	cpse SW0, compare
 	rjmp SW0_end
@@ -128,6 +114,7 @@ loop:
 		breq increase_minutes
 		inc current_seconds
 		ldi TIMER1_OC, 0x00
+
 		rjmp TIMER1_OC_end
 
 	TIMER1_OC_end:
@@ -135,8 +122,9 @@ loop:
 	; out HOURS, current_hours
 	; out MINUTES, current_minutes
 	; out SECONDS, current_seconds
-
-	out PORTB, current_minutes
+	
+	
+	out PORTB, current_seconds
 	rjmp loop
 
 TIMER1_OC_ISR:
