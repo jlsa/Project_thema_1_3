@@ -1,11 +1,13 @@
+.include "m32def.inc"
 /*
  * Project_Thema_1_3.asm
  *
  *  Created: 2-4-2015 10:45:15
  *   Author: Joël, Jari
  */ 
+.org 0x0000
+rjmp init
 
-<<<<<<< HEAD
 .org OC1Aaddr
 rjmp TIMER1_OC_ISR
 
@@ -117,7 +119,7 @@ TIMER1_OC_ISR:
 
 	rcall check_input
 	rcall update
-	rcall display_test
+	rcall display_state_manager
 	
 	out SREG, sreg_state	; copy it back to SREG
 	reti
@@ -234,7 +236,7 @@ update_time:
 ; change to the next state
 change_state:
 	inc state
-	cpi state, 7
+	cpi state, 8
 	breq reset_state
 	rjmp change_state_end
 
@@ -278,23 +280,46 @@ display_cleared:
 	rcall transmit
 	ret
 
-display_test: 
-	cpi timer_counter1, 1
-	brne display_normal
-	rcall display_cleared
-	rjmp end_display
+display_state_manager: 
+	display_state0:
+		cpi state, 0
+		brne display_state1
+		rcall out_display_state0
 
-	display_normal:
-	ldi temp, 0x80
-	rcall transmit
-	clr temp
-	rcall display_hours
-	rcall display_minutes
-	rcall display_seconds
-	
-	ldi temp, 0b0000_0110
-	rcall transmit
+	display_state1:
+		cpi state, 1
+		brne display_state2
+		rcall out_display_state1
 
+	display_state2:
+		cpi state, 2
+		brne display_state3
+		rcall out_display_state2
+
+	display_state3:
+		cpi state, 3
+		brne display_state4
+		rcall out_display_state3
+
+	display_state4:
+		cpi state, 4
+		brne display_state5
+		rcall out_display_state4
+
+	display_state5:
+		cpi state, 5
+		brne display_state6
+		rcall out_display_state5
+
+	display_state6:
+		cpi state, 6
+		brne display_state7
+		rcall out_display_state6
+
+	display_state7:
+		cpi state, 7
+		brne end_display
+		rcall out_display_state7
 	end_display:
 	ret
 
@@ -327,6 +352,228 @@ display_seconds:
 	rcall convert_number
 	rcall transmit
 	ret
+
+; the display states 
+out_display_state0:
+	cpi timer_counter1, 1
+	brne display_normal_state0
+	rcall display_cleared
+	rjmp end_display_state0
+
+	display_normal_state0:
+		clr temp
+		rcall display_hours
+		rcall display_minutes
+		rcall display_seconds
+	
+		ldi temp, 0b0000_0110
+		rcall transmit
+
+	end_display_state0:
+	ret
+out_display_state1:
+	ldi temp, 1
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 1
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 1
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 1
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 1
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 1
+	rcall convert_number
+	rcall transmit
+	
+	ldi temp, 0b0000_0000
+	rcall transmit
+	ret
+out_display_state2:
+
+	ldi temp, 2
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 2
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 2
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 2
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 2
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 2
+	rcall convert_number
+	rcall transmit
+	
+	ldi temp, 0b0000_0000
+	rcall transmit
+	ret
+out_display_state3:
+
+	ldi temp, 3
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 3
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 3
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 3
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 3
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 3
+	rcall convert_number
+	rcall transmit
+	
+	ldi temp, 0b0000_0000
+	rcall transmit
+	ret
+out_display_state4:
+
+	ldi temp, 4
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 4
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 4
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 4
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 4
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 4
+	rcall convert_number
+	rcall transmit
+	
+	ldi temp, 0b0000_0000
+	rcall transmit
+	ret
+out_display_state5:
+
+	ldi temp, 5
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 5
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 5
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 5
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 5
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 5
+	rcall convert_number
+	rcall transmit
+	
+	ldi temp, 0b0000_0000
+	rcall transmit
+	ret
+out_display_state6:
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+	
+	ldi temp, 0b0000_0000
+	rcall transmit
+	ret
+out_display_state7:
+
+	ldi temp, 7
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 7
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 7
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 7
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 7
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 7
+	rcall convert_number
+	rcall transmit
+	
+	ldi temp, 0b0000_0000
+	rcall transmit
+	ret
+
 
 ; transmits the data to the computer
 transmit:
@@ -391,5 +638,3 @@ convert_number:
 	no_value:
 		ldi temp, 0b0111_0111
 		ret
-=======
->>>>>>> c7f0d42fd8272b0b19555b4441474bd430b20988
