@@ -1,13 +1,11 @@
-.include "m32def.inc"
 /*
  * Project_Thema_1_3.asm
  *
  *  Created: 2-4-2015 10:45:15
- *   Author: JoÃ«l, Jari
+ *   Author: Joël, Jari
  */ 
-.org 0x0000
-rjmp init
 
+<<<<<<< HEAD
 .org OC1Aaddr
 rjmp TIMER1_OC_ISR
 
@@ -393,3 +391,5 @@ convert_number:
 	no_value:
 		ldi temp, 0b0111_0111
 		ret
+=======
+>>>>>>> c7f0d42fd8272b0b19555b4441474bd430b20988

@@ -31,5 +31,6 @@ loop:
 
 check_buttons:
 	in temp, PINA
+	
 	out PORTB, temp
 	ret
