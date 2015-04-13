@@ -37,7 +37,15 @@ rjmp TIMER1_OC_ISR
 .def current_seconds = r22
 .def interrupts = r23
 .def state = r24
-.def sreg_state = r25
+.def mode = r25
+
+; we dont use X, Y and Z so we use these registers as general purpose registers
+.def sreg_state = r26
+.def timer_counter1 = r27
+.def timer_counter2 = r28
+; 29
+; 30
+; 31
 
 init:
 	; Set registers to 0x00
@@ -48,6 +56,7 @@ init:
 	ldi current_seconds, 0x00
 	ldi interrupts, 0x00
 	ldi state, 0x00
+	ldi timer_counter1, 0x00
 
 
 	; Load stackpointer
@@ -70,13 +79,13 @@ init:
 
 
 	; wgm, clock select
-	ldi r16, (1 << WGM12) | (1 << CS12)
+	ldi r16, (1 << WGM12) | (1 << CS12) | (1 << CS10)
 	out TCCR1B, r16
 
-	ldi r16, high(10800)
+	ldi r16, high(5400) ; 10800 = 1 second
 	out OCR1AH, r16
 
-	ldi r16, low(10800)
+	ldi r16, low(5400)
 	out OCR1AL, r16
 
 	ldi r16, (1 << OCIE1A)
@@ -100,6 +109,7 @@ init:
 ; continue with the loop
 loop:
 	; do nothing, everything is interrupt based!
+	out PORTB, timer_counter1
 	rjmp loop
 
 
@@ -118,8 +128,8 @@ TIMER1_OC_ISR:
 check_input:
 	; TURN LEDS ON! for debugging purpose only
 	in temp, PINA
-	com temp
-	out PORTB, temp
+	com temp	; inverse so switches show state on leds
+	;out PORTB, temp
 
 	; check if SW0 is pressed
 	cpi temp, 0b0000_0001
@@ -144,7 +154,7 @@ check_input:
 	ret
 
 update:
-	; if state 0 then update normal clock, it just started
+	; if state = 0 then update normal clock, it just started
 	state_0:
 		cpi state, 0
 		brne state_1
@@ -195,6 +205,9 @@ update:
 	ret
 
 update_time:
+	cpi timer_counter1, 2
+	brne TIMER1_OC_end
+	ldi timer_counter1, 0x00
 	; Do whatever timer1 output compare match should do.
 	rjmp increase_seconds
 	increase_hours:
@@ -217,6 +230,7 @@ update_time:
 		rjmp TIMER1_OC_end
 
 	TIMER1_OC_end:
+	inc timer_counter1
 	ret
 
 ; change to the next state
@@ -266,17 +280,24 @@ display_cleared:
 	rcall transmit
 	ret
 
-display_test:
+display_test: 
+	cpi timer_counter1, 1
+	brne display_normal
+	rcall display_cleared
+	rjmp end_display
+
+	display_normal:
 	ldi temp, 0x80
 	rcall transmit
 	clr temp
-	;rcall display_cleared
 	rcall display_hours
 	rcall display_minutes
 	rcall display_seconds
 	
-	mov temp, state
+	ldi temp, 0b0000_0110
 	rcall transmit
+
+	end_display:
 	ret
 
 display_hours:
