@@ -259,8 +259,9 @@ update:
 		brne state_7
 		rcall update_time
 		
-		andi flags, 0b0000_0001
-		cpi flags, 1
+		mov temp, flags
+		andi temp, 0b0000_0001
+		cpi temp, 1
 		breq trigger_alarm
 		rjmp continue_s6
 
@@ -275,14 +276,15 @@ update:
 		s6_alarm:
 			ldi mode, 0
 			; check alarm and set if not set otherwise cancel
-			andi flags, 0b0000_0001
-			cpi flags, 1
+			mov temp, flags
+			andi temp, 0b0000_0001
+			cpi temp, 1
 			breq s6_cancel_alarm
 			rcall set_alarm
 			rjmp update_end
 	
 		s6_cancel_alarm:
-			rcall cancel_alarm
+			rcall unset_alarm
 			rjmp update_end
 	
 	; in state 7 just show the time as a normal clock does
@@ -782,6 +784,9 @@ increment_alarm_minutes:
 set_alarm:
 	sbr flags, (1 << 0)
 	ret
+unset_alarm:
+	cbr flags, (1 << 0)
+	ret
 
 run_alarm:
 	; check if alarm time and normal clock are equal
@@ -805,13 +810,12 @@ run_alarm:
 	end_run_alarm:			
 	ret
 
-cancel_alarm:
+stop_alarm:
 	cbr flags, (1 << 3)
-	cbr flags, (1 << 0)
 	ret
 
 snooze:
-	rcall cancel_alarm
+	rcall unset_alarm
 	rcall increment_alarm_minutes
 	rcall increment_alarm_minutes
 	rcall increment_alarm_minutes
