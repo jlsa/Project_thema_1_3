@@ -10,7 +10,6 @@ public class MultisegmentPanel extends JFrame {
 	private boolean[][] bSeg;
 	private final int W=1300;
 	private final int H=600;
-	private boolean alarm;
 	private long lastAlarm;
 	private AudioStream as;
 	
@@ -27,9 +26,10 @@ public class MultisegmentPanel extends JFrame {
 		setVisible(true);  
 		setResizable(false); 
 		
-		alarm = true;
 		lastAlarm = 0;
 		as = null;
+
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {
@@ -37,7 +37,7 @@ public class MultisegmentPanel extends JFrame {
 			}
 		});
 		
-		showAll();
+		showNothing();
 	}
 	
 	public void setAll(byte[] b) {
@@ -73,10 +73,10 @@ public class MultisegmentPanel extends JFrame {
 	}
 	
     // show all display elements
-	public void showAll() {
+	public void showNothing() {
 		for(int i=0;i<6;i++) 
-		setSegment((byte)0xff, i);
-		setSpecial((byte)0xff);
+		setSegment((byte)0x00, i);
+		setSpecial((byte)0x00);
 		repaint();
 	}
 	
@@ -95,11 +95,6 @@ public class MultisegmentPanel extends JFrame {
 		}
 		g.setFont(new Font("", Font.BOLD, 14));
 		drawSpecial(g);
-		// Play alarm if it hasn't been played for a second and the alarm boolean is set to true.
-		if(alarm && (System.currentTimeMillis() - 1000 >= lastAlarm)) {
-			lastAlarm = System.currentTimeMillis();
-			playAlarm();
-		}
 	}
 	
 	private void drawSegment(Graphics g,boolean[] b, int pos) {
@@ -145,12 +140,12 @@ public class MultisegmentPanel extends JFrame {
 		drawColon(g,0);
 		
 		if (bSeg[6][3]) { // alarm on/off
-			alarm = true;
-		} else {
-			if(alarm) {
-				stopAlarm();
+			if(System.currentTimeMillis() - 5975 >= lastAlarm) {
+				lastAlarm = System.currentTimeMillis();
+				playAlarm();
 			}
-			alarm = false;
+		} else {
+			stopAlarm();
 		}
 	} 
 	
@@ -185,6 +180,7 @@ public class MultisegmentPanel extends JFrame {
 	private void stopAlarm() {
 		if(as != null)
 		AudioPlayer.player.stop(as);
+		as = null;
 	}
 }
 		
