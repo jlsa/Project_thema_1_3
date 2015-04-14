@@ -1,3 +1,3 @@
 @echo off
-java -cp .;RXTXcomm.jar Multisegment COM3
-pause
+title Starting...
+start javaw -cp .;RXTXcomm.jar Multisegment COM4

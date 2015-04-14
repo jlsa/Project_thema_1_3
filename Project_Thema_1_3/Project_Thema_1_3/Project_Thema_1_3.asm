@@ -45,17 +45,14 @@ rjmp TIMER1_OC_ISR
 .def current_minutes = r21
 .def current_seconds = r22
 .def state = r23
-.def ticked = r24
+.def mode = r24
+.def ticked = r25
 ;r25
 
 ; we dont use X, Y and Z so we use these registers as general purpose registers
 .def timer_counter1 = r26
 .def timer_counter2 = r27
 
-.def sw0_maybe = r28
-.def sw0_pressed = r29
-.def sw1_maybe = r30
-.def sw1_pressed = r31
 
 init:
 	; Set registers to 0x00
@@ -68,13 +65,7 @@ init:
 	ldi ticked, 0x00
 	ldi timer_counter1, 0x00
 	ldi timer_counter2, 0x00
-	ldi sw0_maybe, 0x00
-	ldi sw0_pressed, 0x00
-	ldi sw1_maybe, 0x00
-	ldi sw1_pressed, 0x00
 	
-
-
 	; Load stackpointer
 	ldi temp, low(RAMEND)
 	out SPL, temp
@@ -148,13 +139,10 @@ loop:
 ; TIMER1 interrupt
 TIMER1_OC_ISR:
 	in sreg_state, SREG	; copy the SREG
-	cpi timer_counter2, 32
-	breq end_TIMER_OC_ISR
-	ldi ticked, 0xFF
-	ldi timer_counter2, 0
-	
-	end_TIMER_OC_ISR:
-	inc timer_counter2
+
+	rcall update
+	rcall display_state_manager
+
 	out SREG, sreg_state	; copy it back to SREG
 	reti
 
@@ -171,12 +159,13 @@ change_state:
 	ldi state, 0
 
 	change_state_end:
+	rcall display_state_manager
 	out SREG, sreg_state
 	reti
 
 change_mode:
 	in sreg_state, SREG
-
+	inc mode
 	out SREG, sreg_state
 	reti
 
@@ -193,7 +182,15 @@ update:
 	state_1:
 		cpi state, 1
 		brne state_2
+
+		cpi mode, 1
+		brge s1_increment
 		rjmp update_end
+
+		s1_increment:
+			rcall increment_hours
+			ldi mode, 0
+			rjmp update_end
 
 	; in state 2 the clock is not updating, only showing
 	; the time it currently is with the minutes blinking
@@ -339,6 +336,7 @@ display_state_manager:
 		cpi state, 7
 		brne end_display
 		rcall out_display_state7
+
 	end_display:
 	ret
 
@@ -708,22 +706,47 @@ convert_number:
 
 increment_hours:
 	inc current_hours
+	cpi current_hours, 24
+	brne end_increment_hours
+	ldi current_hours, 0
+
+	end_increment_hours:
 	ret
 
 increment_minutes:
 	inc current_minutes
+	cpi current_minutes, 60
+	brne end_increment_minutes
+	ldi current_minutes, 0
+
+	end_increment_minutes:
 	ret
 
 increment_seconds:
 	inc current_seconds
+	cpi current_seconds, 60
+	brne end_increment_seconds
+	ldi current_seconds, 0
+
+	end_increment_seconds:
 	ret
 
 increment_alarm_hours:
 	inc alarm_hours
+	cpi alarm_hours, 24
+	brne end_increment_alarm_hours
+	ldi alarm_hours, 0
+
+	end_increment_alarm_hours:
 	ret
 
 increment_alarm_minutes:
 	inc alarm_minutes
+	cpi alarm_minutes, 24
+	brne end_increment_alarm_minutes
+	ldi alarm_minutes, 0
+
+	end_increment_alarm_minutes:
 	ret
 
 ; additional settings
