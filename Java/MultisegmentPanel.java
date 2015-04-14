@@ -8,8 +8,8 @@ public class MultisegmentPanel extends JFrame {
 	private static final long serialVersionUID = 1L;
 	private Multisegment ms;
 	private boolean[][] bSeg;
-	private final int W=1300;
-	private final int H=600;
+	private final int W=960;
+	private final int H=500;
 	private long lastAlarm;
 	private AudioStream as;
 	
@@ -23,6 +23,7 @@ public class MultisegmentPanel extends JFrame {
 		bSeg[6]=new boolean[5]; 
 		
 		setSize(W,H);
+		setLocationRelativeTo(null);
 		setVisible(true);  
 		setResizable(false); 
 		
@@ -89,16 +90,16 @@ public class MultisegmentPanel extends JFrame {
 		//g.setColor(new Color(242,242,242)); // grey
 		g.fillRect(0, 0, W, H);
 		//g.setColor(new Color(119,147,60)); // green
-		g.setColor(new Color(100,255,0)); // grey
+		g.setColor(new Color(150,255,0)); // greenish
 		for(int i=0;i<6;i++) {
 			drawSegment(g,bSeg[i], i);
 		}
-		g.setFont(new Font("", Font.BOLD, 14));
+		g.setFont(new Font("", Font.BOLD, 20));
 		drawSpecial(g);
 	}
 	
 	private void drawSegment(Graphics g,boolean[] b, int pos) {
-		int xBase=pos*110+290;
+		int xBase=pos*110+120;
 		if (pos>1 && pos <=3) xBase+=40;
 		if (pos>3) xBase+=80;
 		int yBase=160;
@@ -106,6 +107,7 @@ public class MultisegmentPanel extends JFrame {
 		int yL=100;
 		int xTol=10;
 		int yTol=10;
+		System.out.println("Pos: " + pos + " | xBase: " + xBase);
 		
 		if (b[0]) 
 		g.fillRoundRect(xBase, yBase, xL, yTol, 5, 5);
@@ -130,8 +132,9 @@ public class MultisegmentPanel extends JFrame {
 	}
 	
 	private void drawSpecial(Graphics g) {
-		if (bSeg[6][0]) // alarm indicator
-		g.drawString("ALARM", 1030, 170);
+		/*if (bSeg[6][0]) // alarm indicator
+*/
+		g.drawString("ALARM", 760, 120);
 		
 		if (bSeg[6][1]) // second colon
 		drawColon(g,1);
@@ -150,7 +153,7 @@ public class MultisegmentPanel extends JFrame {
 	} 
 	
 	private void drawColon(Graphics g, int pos) {
-		int X=507+pos*260;
+		int X=337+pos*260;
 		int Y=228;
 		g.fillOval(X, Y, 20, 20);
 		Y+=60;
