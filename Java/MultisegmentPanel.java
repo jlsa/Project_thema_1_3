@@ -43,7 +43,7 @@ public class MultisegmentPanel extends JFrame {
 	
 	public void setAll(byte[] b) {
 		for(int i=0;i<6;i++)
-		setSegment(b[i], i);
+			setSegment(b[i], i);
 		setSpecial(b[6]);
 		repaint();
 	}	
@@ -68,7 +68,7 @@ public class MultisegmentPanel extends JFrame {
 	
 	public void clearAll() {
 		for(int i=0;i<6;i++) 
-		setSegment((byte)0x00, i);
+			setSegment((byte)0x00, i);
 		setSpecial((byte)0x00);
 		repaint();
 	}
@@ -76,7 +76,7 @@ public class MultisegmentPanel extends JFrame {
     // show all display elements
 	public void showNothing() {
 		for(int i=0;i<6;i++) 
-		setSegment((byte)0x00, i);
+			setSegment((byte)0x00, i);
 		setSpecial((byte)0x00);
 		repaint();
 	}
@@ -110,30 +110,29 @@ public class MultisegmentPanel extends JFrame {
 		System.out.println("Pos: " + pos + " | xBase: " + xBase);
 		
 		if (b[0]) 
-		g.fillRoundRect(xBase, yBase, xL, yTol, 5, 5);
+			g.fillRoundRect(xBase, yBase, xL, yTol, 5, 5);
 		
 		if (b[1]) 
-		g.fillRoundRect(xBase-xTol, yBase+yTol, xTol, yL, 5, 5);
+			g.fillRoundRect(xBase-xTol, yBase+yTol, xTol, yL, 5, 5);
 		
 		if (b[2]) 
-		g.fillRoundRect(xBase+xL, yBase+yTol, xTol, yL, 5, 5);
+			g.fillRoundRect(xBase+xL, yBase+yTol, xTol, yL, 5, 5);
 		
 		if (b[3]) 
-		g.fillRoundRect(xBase, yBase+yL+yTol, xL, yTol, 5, 5);
+			g.fillRoundRect(xBase, yBase+yL+yTol, xL, yTol, 5, 5);
 		
 		if (b[4]) 
-		g.fillRoundRect(xBase-xTol, yBase+yL+2*yTol, xTol, yL, 5, 5);
+			g.fillRoundRect(xBase-xTol, yBase+yL+2*yTol, xTol, yL, 5, 5);
 		
 		if (b[5]) 
-		g.fillRoundRect(xBase+xL, yBase+yL+2*yTol, xTol, yL, 5, 5);
+			g.fillRoundRect(xBase+xL, yBase+yL+2*yTol, xTol, yL, 5, 5);
 		
 		if (b[6]) 
-		g.fillRoundRect(xBase, yBase+2*yTol+2*yL, xL, yTol, 5, 5);
+			g.fillRoundRect(xBase, yBase+2*yTol+2*yL, xL, yTol, 5, 5);
 	}
 	
 	private void drawSpecial(Graphics g) {
-		/*if (bSeg[6][0]) // alarm indicator
-*/
+		if (bSeg[6][0]) // alarm indicator
 		g.drawString("ALARM", 760, 120);
 		
 		if (bSeg[6][1]) // second colon
@@ -182,8 +181,7 @@ public class MultisegmentPanel extends JFrame {
 	 */
 	private void stopAlarm() {
 		if(as != null)
-		AudioPlayer.player.stop(as);
+			AudioPlayer.player.stop(as);
 		as = null;
 	}
 }
-		

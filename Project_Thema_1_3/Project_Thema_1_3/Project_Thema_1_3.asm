@@ -169,7 +169,7 @@ change_state:
 
 change_mode:
 	in sreg_state, SREG
-	inc mode
+	inc mode	
 	out SREG, sreg_state
 	reti
 
@@ -257,22 +257,39 @@ update:
 	state_6:
 		cpi state, 6
 		brne state_7
+		rcall update_time
+		
+		andi flags, 0b0000_0001
+		cpi flags, 1
+		breq trigger_alarm
 
-		; set alarm clock here
+		trigger_alarm:
+			
+			rjmp cont_state_6
+
+		cont_state_6:
 		cpi mode, 1
-		brge s6_set_alarm
+		brge s6_alarm
 		rjmp update_end
 
-		s6_set_alarm:
-			rcall set_alarm
+		s6_alarm:
 			ldi mode, 0
+			; check alarm and set if not set otherwise cancel
+			andi flags, 0b0000_0001
+			cpi flags, 1
+			breq s6_cancel_alarm
+			rcall set_alarm
+			rjmp update_end
+	
+		s6_cancel_alarm:
+			rcall cancel_alarm
 			rjmp update_end
 	
 	; in state 7 just show the time as a normal clock does
 	state_7:
 		cpi state, 7
 		brne update_end
-		rcall update_time
+		;rcall update_time
 
 	update_end:
 		rcall timer_manager
@@ -523,8 +540,7 @@ out_display_state0:
 		rcall display_minutes
 		rcall display_seconds
 	
-		ldi temp, 0b0000_0110
-		rcall transmit
+		rcall display_additional
 
 	end_display_state0:
 	ret
@@ -615,38 +631,37 @@ out_display_state5:
 	ret
 
 out_display_state6:
-
-	ldi temp, 6
-	rcall convert_number
-	rcall transmit
-
-	ldi temp, 6
-	rcall convert_number
-	rcall transmit
-
-	ldi temp, 6
-	rcall convert_number
-	rcall transmit
-
-	ldi temp, 6
-	rcall convert_number
-	rcall transmit
-
-	ldi temp, 6
-	rcall convert_number
-	rcall transmit
-
-	ldi temp, 6
-	rcall convert_number
-	rcall transmit
-	
-	rcall display_additional
-	ret
-out_display_state7:
 	clr temp
 	rcall display_hours
 	rcall display_minutes
 	rcall display_seconds
+	
+	rcall display_additional
+	ret
+out_display_state7:
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
+
+	ldi temp, 6
+	rcall convert_number
+	rcall transmit
 	
 	rcall display_additional
 	ret
@@ -765,9 +780,25 @@ increment_alarm_minutes:
 
 ; additional settings
 set_alarm:
-	sbr flags, 0
+	sbr flags, (1 << 0)
+	ret
+
+run_alarm:
+	sbr flags, (1 << 3)
 	ret
 
 cancel_alarm:
-	cbr flags, 0
+	cbr flags, (1 << 3)
+	cbr flags, (1 << 0)
+	ret
+
+snooze:
+	rcall cancel_alarm
+	rcall increment_alarm_minutes
+	rcall increment_alarm_minutes
+	rcall increment_alarm_minutes
+	rcall increment_alarm_minutes
+	rcall increment_alarm_minutes
+	rcall set_alarm
+
 	ret
