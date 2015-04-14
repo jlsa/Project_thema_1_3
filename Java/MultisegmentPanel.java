@@ -30,6 +30,8 @@ public class MultisegmentPanel extends JFrame {
 		alarm = true;
 		lastAlarm = 0;
 		as = null;
+
+		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		
 		addWindowListener(new WindowAdapter() {
 			public void windowClosing(WindowEvent e) {

@@ -46,7 +46,7 @@ public abstract class MultisegmentListener {
 		System.out.println("** Write byte = 0x01");
 	    } else 
 		write((byte)0x02); 
-	    System.out.println("** Write byte = 0x02");
+		System.out.println("** Write byte = 0x02");
 	}
     }
 	
