@@ -37,7 +37,7 @@ public class MultisegmentPanel extends JFrame {
 			}
 		});
 		
-		showAll();
+		showNothing();
 	}
 	
 	public void setAll(byte[] b) {
@@ -73,10 +73,10 @@ public class MultisegmentPanel extends JFrame {
 	}
 	
     // show all display elements
-	public void showAll() {
+	public void showNothing() {
 		for(int i=0;i<6;i++) 
-		setSegment((byte)0xff, i);
-		setSpecial((byte)0xff);
+		setSegment((byte)0x00, i);
+		setSpecial((byte)0x00);
 		repaint();
 	}
 	
