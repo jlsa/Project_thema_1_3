@@ -262,12 +262,12 @@ update:
 		andi flags, 0b0000_0001
 		cpi flags, 1
 		breq trigger_alarm
+		rjmp continue_s6
 
 		trigger_alarm:
-			
-			rjmp cont_state_6
+			rcall run_alarm
 
-		cont_state_6:
+		continue_s6:
 		cpi mode, 1
 		brge s6_alarm
 		rjmp update_end
@@ -784,7 +784,25 @@ set_alarm:
 	ret
 
 run_alarm:
-	sbr flags, (1 << 3)
+	; check if alarm time and normal clock are equal
+	cp alarm_hours, current_hours
+	breq check_if_minutes_trigger
+	rjmp end_run_alarm
+
+	check_if_minutes_trigger:
+		cp alarm_minutes, current_minutes
+		breq check_if_second_is_zero
+		rjmp end_run_alarm
+
+		check_if_second_is_zero:
+			cpi current_seconds, 0
+			breq really_run_alarm
+			rjmp end_run_alarm
+
+			really_run_alarm:
+				sbr flags, (1 << 3)
+
+	end_run_alarm:			
 	ret
 
 cancel_alarm:
