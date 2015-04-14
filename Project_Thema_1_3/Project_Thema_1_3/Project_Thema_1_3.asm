@@ -8,6 +8,12 @@
 .org 0x0000
 rjmp init
 
+.org INT0addr
+rjmp change_state
+
+.org INT1addr
+rjmp change_mode
+
 .org OC1Aaddr
 rjmp TIMER1_OC_ISR
 
@@ -30,6 +36,7 @@ rjmp TIMER1_OC_ISR
 
 
 .def sreg_state = r1
+.def input = r2
 .def temp = r16
 .def temp2 = r17
 .def alarm_hours = r18
@@ -86,6 +93,13 @@ init:
 	ldi temp, (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0)
 	out UCSRC, temp
 
+	; interrupts
+	ldi r16, (1<<INT1)|(1<<INT0)
+	out GICR, r16
+	
+	ldi r16, (1<<ISC00)|(1<<ISC01)|(1<<ISC10)|(1<<ISC11)
+	out MCUCR, r16
+
 	; 16 bit
 	; wgm, clock select
 	ldi r16, (1 << WGM12) | (1 << CS12) | (1 << CS10)
@@ -117,11 +131,15 @@ init:
 
 ; continue with the loop
 loop:
+	; check if ticked
 	cpi ticked, 0xFF
 	brne end_loop
-	rcall check_input
+	
+	continue_loop:
 	rcall update
 	rcall display_state_manager
+
+	; reset ticked
 	ldi ticked, 0x00
 
 	end_loop:
@@ -130,40 +148,37 @@ loop:
 ; TIMER1 interrupt
 TIMER1_OC_ISR:
 	in sreg_state, SREG	; copy the SREG
-	ldi ticked, 0xFF	
+	cpi timer_counter2, 32
+	breq end_TIMER_OC_ISR
+	ldi ticked, 0xFF
+	ldi timer_counter2, 0
+	
+	end_TIMER_OC_ISR:
+	inc timer_counter2
 	out SREG, sreg_state	; copy it back to SREG
 	reti
 
-; check the input
-check_input:
-	; TURN LEDS ON! for debugging purpose only
-	in temp, PINA
-	com temp	; inverse so switches show state on leds
-	;out PORTB, temp
+; change to the next state
+change_state:
+	in sreg_state, SREG
+	inc state
+	cpi state, 8
+	breq reset_state
+	rjmp change_state_end
 
-	; check if SW0 is pressed
-	cpi temp, 0b0000_0001
-	breq check_input_change_state
+	; reset the state to zero if required
+	reset_state:
+	ldi state, 0
 
-	; check if SW1 is pressed
-	cpi temp, 0b0000_0010
-	breq check_input_set_sw1_pressed
+	change_state_end:
+	out SREG, sreg_state
+	reti
 
-	; jump out of this subroutine
-	rjmp check_input_end
+change_mode:
+	in sreg_state, SREG
 
-	check_input_change_state:
-		rcall change_state
-		rjmp check_input_end
-
-	check_input_set_sw1_pressed:
-		ldi sw1_pressed, 0xFF
-		rjmp check_input_end
-
-
-	; end of the check_input subroutine
-	check_input_end:
-	ret
+	out SREG, sreg_state
+	reti
 
 update:
 	; if state = 0 then update normal clock, it just started
@@ -178,13 +193,6 @@ update:
 	state_1:
 		cpi state, 1
 		brne state_2
-
-		cpi sw1_pressed, 1
-		breq state1_increment_hour
-		rjmp update_end
-
-		state1_increment_hour:
-		rcall increment_hours
 		rjmp update_end
 
 	; in state 2 the clock is not updating, only showing
@@ -192,25 +200,12 @@ update:
 	state_2:
 		cpi state, 2
 		brne state_3
-		cpi sw1_pressed, 1
-		breq state2_increment_minutes
-		rjmp update_end
-
-		state2_increment_minutes:
-		rcall increment_minutes
-
 		rjmp update_end
 	; in state 3 the clock is not updating, only showing
 	; the time it currently is with the seconds blinking
 	state_3:
 		cpi state, 3
 		brne state_4
-		cpi sw1_pressed, 1
-		breq state3_increment_seconds
-		rjmp update_end
-
-		state3_increment_seconds:
-		rcall increment_seconds
 		rjmp update_end
 
 	; in state 4 the clock is not updating, only showing
@@ -218,12 +213,6 @@ update:
 	state_4:
 		cpi state, 4
 		brne state_5
-		cpi sw1_pressed, 1
-		breq state4_increment_hour
-		rjmp update_end
-
-		state4_increment_hour:
-		rcall increment_alarm_hours
 		rjmp update_end
 
 	; in state 5 the clock is not updating, only showing
@@ -231,12 +220,6 @@ update:
 	state_5:
 		cpi state, 5
 		brne state_6
-		cpi sw1_pressed, 1
-		breq state5_increment_minutes
-		rjmp update_end
-
-		state5_increment_minutes:
-		rcall increment_alarm_minutes
 		rjmp update_end
 
 	; in state 6 it shows the set alarm time and is it 
@@ -293,20 +276,6 @@ update_time:
 		rjmp update_time_end
 
 	update_time_end:
-	ret
-
-; change to the next state
-change_state:
-	inc state
-	cpi state, 8
-	breq reset_state
-	rjmp change_state_end
-
-	; reset the state to zero if required
-	reset_state:
-	ldi state, 1
-
-	change_state_end:
 	ret
 
 display_cleared:
@@ -742,15 +711,19 @@ increment_hours:
 	ret
 
 increment_minutes:
+	inc current_minutes
 	ret
 
 increment_seconds:
+	inc current_seconds
 	ret
 
 increment_alarm_hours:
+	inc alarm_hours
 	ret
 
 increment_alarm_minutes:
+	inc alarm_minutes
 	ret
 
 ; additional settings
