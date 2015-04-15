@@ -288,15 +288,6 @@ update_time:
 	end_update:
 		ret
 
-; display an empty screen transmits only zero's
-display_cleared:
-	clr temp
-	rcall display_two_empty_digits
-	rcall display_two_empty_digits
-	rcall display_two_empty_digits
-	rcall transmit
-	ret
-
 display_state_manager:						; state manager for controlling which calls the right routine for showing the current state
 	display_state0:							; if state 0 then display state 0 else check state 1
 		cpi state, 0						
@@ -509,7 +500,7 @@ run_alarm:
 			ret
 
 			really_run_alarm:
-				sbr flags, (1 << 3)				; Set the third bit in flags, this results in an alarm that goes off
+				sbr flags, (1 << 3)				; Set the fourth bit in flags, this results in an alarm that goes off
 				ret
 
 stop_alarm:
