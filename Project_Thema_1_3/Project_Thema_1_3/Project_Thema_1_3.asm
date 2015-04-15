@@ -67,7 +67,6 @@ init:
 	ldi flags, 0x00
 	ldi timer_counter1, 0x00
 	ldi timer_counter2, 0x00
-
 	
 	; Load stackpointer
 	ldi temp, low(RAMEND)
@@ -115,10 +114,11 @@ init:
 	ldi r16, 0b0000_0000
 	out DDRA, temp
 
-	; init leds (output)
-	ldi r16, 0b1111_1111
-	out DDRB, r16
-	out PORTB, r16
+	; Set lights on
+	ldi temp, 0b1111_1111
+	out DDRB, temp
+	ldi temp, 0b1111_0011
+	out PORTB, temp
 
 	;ldi r16, 0b0000_0000
 	;out DDRD, r16
@@ -275,6 +275,13 @@ update:
 
 		s6_alarm:
 			ldi mode, 0
+			; check if alarm is going off
+			mov temp, flags
+			andi temp, 0b0000_1000
+			cpi temp, 8
+			brne s6_alarm_continue
+			rcall stop_alarm
+			s6_alarm_continue:
 			; check alarm and set if not set otherwise cancel
 			mov temp, flags
 			andi temp, 0b0000_0001
