@@ -3,10 +3,9 @@
  *
  *  Created: 2-4-2015 10:45:15
  *  Version: 16-4-2015
- *   Author: Joël, Jari
+ *   Author: JoÃ«l, Jari
  */ 
 .include "m32def.inc"
-
 .org 0x0000
 rjmp init
 .org INT0addr
@@ -17,17 +16,15 @@ rjmp change_mode
 rjmp tick
 
 .cseg
-; increments time, usage -> increment_time current_hours 24
-.macro increment_time
+.macro increment_time						; increments time, usage -> increment_time current_hours 24
 	inc @0
 	cpi @0, @1
-	brne end_increment_time						; check for overflow
+	brne end_increment_time					; check for overflow
 	ldi @0, 0x00
 	end_increment_time:
 .endmacro
 
-; modulo macro
-.macro modulo
+.macro modulo								; modulo macro
 	clr temp
 	mov temp2, @0
 	rjmp modulo_start
@@ -41,26 +38,23 @@ rjmp tick
 		push temp
 .endmacro
 
-; display the time, insert time
-.macro display_time
-	mov time, @0						; temp for time special
-	rcall transmit_time					; transmit the data
+.macro display_time							; display the time, insert time
+	mov time, @0							; temp for time special
+	rcall transmit_time						; transmit the data
 .endmacro
 
-; display the time blinking
-.macro blinking_time
-	cpi timer_counter1, 1				; check if can show normal time or empty
-	brne show							; yes, jump to show
-	rcall display_two_empty_digits		; no, then display empty
+.macro blinking_time						; display the time blinking
+	cpi timer_counter1, 1					; check if can show normal time or empty
+	brne show								; yes, jump to show
+	rcall display_two_empty_digits			; no, then display empty
 	rjmp end_blink_time
 
 	show:
-		display_time @0		; display the current hours
+		display_time @0						; display the current hours
 	end_blink_time:
 .endmacro
 
-; transmit a converted segment
-.macro transmit_segment
+.macro transmit_segment						; transmit a converted segment
 	mov temp, @0
 	rcall convert_number
 	rcall transmit
@@ -82,8 +76,7 @@ rjmp tick
 .def timer_counter1 = r27
 
 
-init:
-	; Set registers to 0x00
+init:	; Set registers to 0x00
 	ldi alarm_hours, 0x00
 	ldi alarm_minutes, 0x00
 	ldi current_hours, 0x00
@@ -95,36 +88,32 @@ init:
 	ldi timer_counter1, 0x00
 	ldi time, 0x00
 	
-	; Load stackpointer
-	ldi temp, low(RAMEND)
+	ldi temp, low(RAMEND)					; Load stackpointer
 	out SPL, temp
 	ldi temp, high(RAMEND)
 	out SPH, temp
 
-	; init UART
-	ldi temp, high(35)
-	out UBRRH, temp
-	ldi temp, low(35)
-	out UBRRL, temp
+	ldi temp, high(35)						; init UART
+	out UBRRH, temp							; init UART
+	ldi temp, low(35)						; init UART
+	out UBRRL, temp							; init UART
+	ldi temp, (1 << RXEN) | (1 << TXEN)		; init UART
+	out UCSRB, temp							; init UART
+	ldi temp, (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0)	; init UART
+	out UCSRC, temp							; init UART
 	
-	ldi temp, (1 << RXEN) | (1 << TXEN)
-	out UCSRB, temp
-
-	ldi temp, (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0)
-	out UCSRC, temp
 	
-	; set all the interrupts
-	ldi r16, (1<<INT1)|(1<<INT0)							; set int0 and int1
-	out GICR, r16
+	ldi r16, (1<<INT1)|(1<<INT0)			; set all the interrupts
+	out GICR, r16							; set int0 and int1
 	
 	ldi r16, (1<<ISC00)|(1<<ISC01)|(1<<ISC10)|(1<<ISC11)	; set the edge on which the interrupt should trigger
 	out MCUCR, r16
 
-	; wgm, clock select
-	ldi r16, (1 << WGM12) | (1 << CS12) | (1 << CS10)		; set the prescaler to 1024
+	
+	ldi r16, (1 << WGM12) | (1 << CS12) | (1 << CS10)		; set the prescaler to 1024, wgm, clock select
 	out TCCR1B, r16
 
-	ldi r16, high(10800/2) ; 10800 = 1 second / 2 is 0.5 seconds
+	ldi r16, high(10800/2) 					; 10800 = 1 second / 2 is 0.5 seconds
 	out OCR1AH, r16
 
 	ldi r16, low(10800/2)
@@ -133,17 +122,16 @@ init:
 	ldi r16, (1 << OCIE1A)
 	out TIMSK, r16
 
-	; init interrupt flag in sreg
-	sei
+	
+	sei										; init interrupt flag in sreg
 
-	; Set lights indicating the buttons on
-	ldi temp, 0b0000_1100
+	
+	ldi temp, 0b0000_1100					; Set lights indicating the buttons on
 	out DDRB, temp
 	ldi temp, 0b1111_0011
 	out PORTB, temp
 
-loop:
-	; do nothing here everything happens within the timer1 interrupt
+loop:										; do nothing here everything happens within the timer1 interrupt
 	rjmp loop
 
 tick:										; TIMER1 interrupt
@@ -153,8 +141,8 @@ tick:										; TIMER1 interrupt
 	out SREG, sreg_state					; write it back to SREG
 	reti
 
-; change to the next state
-change_state:								; int0 interrupt
+
+change_state:								; int0 interrupt, change to the next state
 	in sreg_state, SREG						; copy the SREG
 	inc state								; go to the next state
 	clr mode								; reset the mode so the other state cant do anything wrong with it.
@@ -221,7 +209,7 @@ change_mode:								; int1 interrupt
 	end_change_mode:
 		out SREG, sreg_state				; write it back to SREG
 		reti
-
+		
 update:
 	state_0:								; if state = 0 then update normal clock, it just started
 		cpi state, 0
@@ -333,8 +321,7 @@ display_state_manager:						; state manager for controlling which calls the righ
 		end_display:
 		ret
 
-; transmit the time given in two different segments
-transmit_time:
+transmit_time:								; transmit the time given in two different segments
 	modulo time, 10							; split the time into two variables
 	pop temp								; now its time to display to display them
 	transmit_segment temp					; so transmit variable one
@@ -342,29 +329,25 @@ transmit_time:
 	transmit_segment temp
 	ret
 
-; displays the two colons and the alarm if needed
-display_additional:
+display_additional:							; displays the two colons and the alarm if needed
 	mov temp, flags
 	rcall transmit
 	ret
 
-; makes sure there are two digits from the seven segment display empty
-display_two_empty_digits:
+display_two_empty_digits:					; makes sure there are two digits from the seven segment display empty
 	clr temp
 	rcall transmit
 	rcall transmit
 	ret
 
-; display the delta between start/reset of program and now blinking
-out_display_state0:
+out_display_state0:							; display the delta between start/reset of program and now blinking
 	blinking_time current_hours
 	blinking_time current_minutes
 	blinking_time current_seconds
 	rcall display_additional
 	ret
 
-; display hours blinking and the others static
-out_display_state1:
+out_display_state1:							; display hours blinking and the others static
 	blinking_time current_hours
 	out_display_s1_normal:
 		display_time current_minutes
@@ -372,56 +355,49 @@ out_display_state1:
 		rcall display_additional
 	ret
 
-; display minutes blinking and the hour and minutes static
-out_display_state2:
-	display_time current_hours
+out_display_state2:							; display minutes blinking and the hour and minutes static
+	display_time current_hours	
 	blinking_time current_minutes
 	display_time current_seconds
 	rcall display_additional
 	ret
 
-; display seconds blinking and the other segments static
-out_display_state3:
+out_display_state3:							; display seconds blinking and the other segments static
 	display_time current_hours
 	display_time current_minutes
 	blinking_time current_seconds
 	rcall display_additional
 	ret
 	
-; display the alarm hours blinking and the minutes static
-out_display_state4:
+out_display_state4:							; display the alarm hours blinking and the minutes static
 	blinking_time alarm_hours
 	display_time alarm_minutes
 	rcall display_two_empty_digits
 	rcall display_additional
 	ret
 
-; display the alarm minutes blinking and the hours static
-out_display_state5:
+out_display_state5:							; display the alarm minutes blinking and the hours static
 	display_time alarm_hours
 	blinking_time alarm_minutes
 	rcall display_two_empty_digits
 	rcall display_additional
 	ret
 
-; display the normal clock state
-out_display_state6:
+out_display_state6:							; display the normal clock state
 	display_time current_hours
 	display_time current_minutes
 	display_time current_seconds	
 	rcall display_additional
 	ret
 
-; transmits the data to the computer
-transmit:
+transmit:									; transmits the data to the computer
 	transmit_start:													
 	sbis UCSRA, UDRE
 	rjmp transmit_start
 	out UDR, temp
 	ret
 
-; converts the number in temp to a binary 7 segment representation and puts it back in temp
-convert_number:
+convert_number:								; converts the number in temp to a binary 7 segment representation and puts it back in temp
 	check_0:
 		cpi temp, 0
 		brne check_1
@@ -507,6 +483,5 @@ stop_alarm:
 	cbr flags, (1 << 3)							; clear bit 3 in flags. this stops the alarm
 	ret
 
-; this is the end for every routine, the last place it is
-end_routine:
+end_routine:									; this is the end for every routine, the last place it is
 	ret
