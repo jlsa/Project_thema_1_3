@@ -1,23 +1,30 @@
-.include "m32def.inc"
 /*
  * Project_Thema_1_3.asm
  *
  *  Created: 2-4-2015 10:45:15
+ *  Version: 16-4-2015
  *   Author: Joël, Jari
  */ 
+.include "m32def.inc"
+
 .org 0x0000
 rjmp init
-
 .org INT0addr
 rjmp change_state
-
 .org INT1addr
 rjmp change_mode
-
 .org OC1Aaddr
-rjmp TIMER1_OC_ISR
+rjmp tick
 
 .cseg
+; increments time, usage -> increment_time current_hours 24
+.macro increment_time
+	inc @0
+	cpi @0, @1
+	brne end_increment_time						; check for overflow
+	ldi @0, 0x00
+	end_increment_time:
+.endmacro
 
 ; modulo macro
 .macro modulo
@@ -34,11 +41,22 @@ rjmp TIMER1_OC_ISR
 		push temp
 .endmacro
 
-; display the time
-; param time to show
+; display the time, insert time
 .macro display_time
-	mov time, @0			; temp for time special
-	rcall transmit_time		; transmit the data
+	mov time, @0						; temp for time special
+	rcall transmit_time					; transmit the data
+.endmacro
+
+; display the time blinking
+.macro blinking_time
+	cpi timer_counter1, 1				; check if can show normal time or empty
+	brne show							; yes, jump to show
+	rcall display_two_empty_digits		; no, then display empty
+	rjmp end_blink_time
+
+	show:
+		display_time @0		; display the current hours
+	end_blink_time:
 .endmacro
 
 ; transmit a converted segment
@@ -128,202 +146,147 @@ loop:
 	; do nothing here everything happens within the timer1 interrupt
 	rjmp loop
 
-; TIMER1 interrupt
-TIMER1_OC_ISR:
+tick:										; TIMER1 interrupt
 	in sreg_state, SREG						; copy the SREG
-
 	rcall update
 	rcall display_state_manager
-
 	out SREG, sreg_state					; write it back to SREG
 	reti
 
 ; change to the next state
-change_state:
-	in sreg_state, SREG
+change_state:								; int0 interrupt
+	in sreg_state, SREG						; copy the SREG
 	inc state								; go to the next state
 	clr mode								; reset the mode so the other state cant do anything wrong with it.
 	cpi state, 7							; if the state reaches 7 then reset it
 	breq reset_state
 	rjmp change_state_end
 
-	; reset the state to zero if required
-	reset_state:
-	ldi state, 1
+	reset_state:							; reset the state to 1 if required
+		ldi state, 1						; go back to the "second" state because we dont want it to be in init mode again
 
 	change_state_end:
-	rcall display_state_manager
-	out SREG, sreg_state
-	reti
+		rcall display_state_manager			; refresh screen instantly, so you see the change!
+		out SREG, sreg_state				; write it back to SREG
+		reti
 
-change_mode:
-	in sreg_state, SREG
-	inc mode	
-	out SREG, sreg_state
-	reti
+change_mode:								; int1 interrupt
+	in sreg_state, SREG						; copy the SREG
+	cpi state, 1							; check if state is 1, then go do state 1 stuff
+	breq s1
+	cpi state, 2							; check if state is 2, then go do state 2 stuff
+	breq s2
+	cpi state, 3							; check if state is 3, then go do state 3 stuff
+	breq s3
+	cpi state, 4							; check if state is 4, then go do state 4 stuff
+	breq s4
+	cpi state, 5							; check if state is 5, then go do state 5 stuff
+	breq s5
+	cpi state, 6							; check if state is 6, then go do state 6 stuff
+	breq s6
+	rjmp end_change_mode					; done there are no states left to check!
 
-update:
-	; if state = 0 then update normal clock, it just started
-	state_0:
-		cpi state, 0
-		brne state_1
-		rcall update_time	; just update the clock
-		rjmp update_end
-
-	; in state 1 the clock is not updating, only showing 
-	; the time it currently is with the hours blinking
-	state_1:
-		cpi state, 1
-		brne state_2
-
-		cpi mode, 1
-		brge s1_increment
-		rjmp update_end
-
-		s1_increment:
-			rcall increment_hours
-			ldi mode, 0
-			rjmp update_end
-
-	; in state 2 the clock is not updating, only showing
-	; the time it currently is with the minutes blinking
-	state_2:
-		cpi state, 2
-		brne state_3
-
-		cpi mode, 1
-		brge s2_increment
-		rjmp update_end
-
-		s2_increment:
-			rcall increment_minutes
-			ldi mode, 0
-			rjmp update_end
-	; in state 3 the clock is not updating, only showing
-	; the time it currently is with the seconds blinking
-	state_3:
-		cpi state, 3
-		brne state_4
-		cpi mode, 1
-		brge s3_increment
-		rjmp update_end
-
-		s3_increment:
-			rcall increment_seconds
-			ldi mode, 0
-			rjmp update_end
-
-	; in state 4 the clock is not updating, only showing
-	; the alarm clock time with the hours blinking
-	state_4:
-		cpi state, 4
-		brne state_5
-		cpi mode, 1
-		brge s4_increment
-		rjmp update_end
-
-		s4_increment:
-			rcall increment_alarm_hours
-			ldi mode, 0
-			rjmp update_end
-
-	; in state 5 the clock is not updating, only showing
-	; the alarm clock time with the minutes blinking
-	state_5:
-		cpi state, 5
-		brne state_6
-		cpi mode, 1
-		brge s5_increment
-		rjmp update_end
-
-		s5_increment:
-			rcall increment_alarm_minutes
-			ldi mode, 0
-			rjmp update_end
-
-	; in state 6 it shows the set alarm time and is it 
-	; possible to set the alarm on and off
-	state_6:
-		cpi state, 6
-		brne update_end
-		rcall update_time
+	s1:
+		increment_time current_hours, 24
+		rjmp end_change_mode
+	s2:
+		increment_time current_minutes, 60
+		rjmp end_change_mode
+	s3:
+		increment_time current_seconds, 60
+		rjmp end_change_mode
+	s4:
+		increment_time alarm_hours, 24
+		rjmp end_change_mode
+	s5:
+		increment_time alarm_minutes, 60
+		rjmp end_change_mode
+	s6:
+		mov temp, flags						; check if alarm is going off
+		andi temp, 0b0000_1000
+		cpi temp, 8
+		brne s6_alarm_continue
+		rcall stop_alarm
 		
-		mov temp, flags
-		andi temp, 0b0000_0001
-		cpi temp, 1
-		breq trigger_alarm
-		rjmp continue_s6
-
-		trigger_alarm:
-			rcall run_alarm
-
-		continue_s6:
-		cpi mode, 1
-		brge s6_alarm
-		rjmp update_end
-
-		s6_alarm:
-			ldi mode, 0
-			; check if alarm is going off
-			mov temp, flags
-			andi temp, 0b0000_1000
-			cpi temp, 8
-			brne s6_alarm_continue
-			rcall stop_alarm
-			s6_alarm_continue:
-			; check alarm and set if not set otherwise cancel
-			mov temp, flags
+		s6_alarm_continue:
+			mov temp, flags					; check alarm and set it if not set otherwise cancel
 			andi temp, 0b0000_0001
 			cpi temp, 1
 			breq s6_cancel_alarm
 			rcall set_alarm
-			rjmp update_end
-	
+			rjmp end_change_mode
 		s6_cancel_alarm:
 			rcall unset_alarm
-			rjmp update_end
+
+	end_change_mode:
+		out SREG, sreg_state				; write it back to SREG
+		reti
+
+update:
+	state_0:								; if state = 0 then update normal clock, it just started
+		cpi state, 0
+		brne state_6
+		rcall update_time					; just update the clock
+		rjmp update_end
+
+	state_6:								; in state 6 it shows the set alarm time and is it 
+		cpi state, 6						; possible to set the alarm on and off
+		brne update_end
+		rcall update_time
+		mov temp, flags
+		andi temp, 0b0000_0001
+		cpi temp, 1
+		breq trigger_alarm
+		rjmp update_end
+
+		trigger_alarm:
+			rcall run_alarm
 
 	update_end:
 		rcall timer_manager					; manage the timer_counter
 		inc timer_counter1					; increment timer_counter
-	ret
+		ret
 
-
-timer_manager:
+timer_manager:								; the time manager, it increments the timer counter and resets it if it reaches 2 (1 full second)
 	cpi timer_counter1, 2
 	breq reset_timer_counter1
-	rjmp end_timer_manager
+	rjmp end_routine
+	
 	reset_timer_counter1:
-	ldi timer_counter1, 0x00
-
-	end_timer_manager:
-	ret
+		ldi timer_counter1, 0x00
+		ret
 
 update_time:
 	cpi timer_counter1, 2					; is it ready to increment time?
-	brne update_time_end					; no, then skip to the end of this routine
+	brne end_update							; no, then skip to the end of this routine
 	rjmp increase_seconds					; yes, go to increment_seconds
-	
-	increase_hours:
-		ldi current_seconds, 0x00
+
+	overflow_hours:							; overflow hours to zero
+		ldi current_hours, 0x00
+		rjmp end_routine
+
+	increase_hours:							; increase the hours with one, if it reaches 24 it goes to overflow_hours
+		ldi current_seconds, 0x00			; and set seconds and minutes to zero
 		ldi current_minutes, 0x00
 		inc current_hours
-		rjmp update_time_end
+		cpi current_hours, 24
+		breq overflow_hours
+		rjmp end_routine
 
-	increase_minutes:
-		cpi current_minutes, 59
-		breq increase_hours
+	increase_minutes:						; if it reached 59 then it skips this and it will go to increase_hours.
+		cpi current_minutes, 59				; otherwise it will increase with one and sets seconds to zero
+		breq increase_hours 
 		ldi current_seconds, 0x00
 		inc current_minutes
-		rjmp update_time_end
+		rjmp end_routine
 
-	increase_seconds:
-		cpi current_seconds, 59
+	increase_seconds:						; increase seconds with one only if seconds is (0 < seconds < 59) else
+		cpi current_seconds, 59				; go to increase minutes
 		breq increase_minutes
 		inc current_seconds
-
-	update_time_end:
-	ret
+		rjmp end_routine
+	end_update:
+		ret
 
 ; display an empty screen transmits only zero's
 display_cleared:
@@ -334,51 +297,50 @@ display_cleared:
 	rcall transmit
 	ret
 
-; state manager for controlling which calls the right routine for showing the current state
-display_state_manager: 
+display_state_manager:						; state manager for controlling which calls the right routine for showing the current state
 	display_state0:							; if state 0 then display state 0 else check state 1
 		cpi state, 0						
 		brne display_state1
 		rcall out_display_state0			; show state 0
-		rjmp end_display					; leave state manager routine
+		rjmp end_routine					; leave state manager routine
 
 	display_state1:							; if state 1 then display state 0 else check state 2
 		cpi state, 1
 		brne display_state2
 		rcall out_display_state1			; show state 1
-		rjmp end_display					; leave state manager routine
+		rjmp end_routine					; leave state manager routine
 
 	display_state2:							; if state 2 then display state 0 else check state 3
 		cpi state, 2
 		brne display_state3
 		rcall out_display_state2			; show state 2
-		rjmp end_display					; leave state manager routine
+		rjmp end_routine					; leave state manager routine
 
 	display_state3:							; if state 3 then display state 0 else check state 4
 		cpi state, 3
 		brne display_state4
 		rcall out_display_state3			; show state 3
-		rjmp end_display					; leave state manager routine
+		rjmp end_routine					; leave state manager routine
 
 	display_state4:							; if state 4 then display state 0 else check state 5
 		cpi state, 4
 		brne display_state5
 		rcall out_display_state4			; show state 4
-		rjmp end_display					; leave state manager routine
+		rjmp end_routine					; leave state manager routine
 
 	display_state5:							; if state 5 then display state 0 else check state 6
 		cpi state, 5
 		brne display_state6
 		rcall out_display_state5			; show state 5
-		rjmp end_display					; leave state manager routine
+		rjmp end_routine					; leave state manager routine
 
 	display_state6:							; if state 6 then display state 0 else leave the state manager routine
 		cpi state, 6
 		brne end_display					; leave state manager routine
 		rcall out_display_state6			; show state 6
-
-	end_display:
-	ret
+		
+		end_display:
+		ret
 
 ; transmit the time given in two different segments
 transmit_time:
@@ -395,7 +357,6 @@ display_additional:
 	rcall transmit
 	ret
 
-
 ; makes sure there are two digits from the seven segment display empty
 display_two_empty_digits:
 	clr temp
@@ -405,104 +366,51 @@ display_two_empty_digits:
 
 ; display the delta between start/reset of program and now blinking
 out_display_state0:
-	cpi timer_counter1, 1
-	brne display_normal_state0
-	rcall display_cleared
-	rjmp end_display_state0
-
-	display_normal_state0:
-		display_time current_hours
-		display_time current_minutes
-		display_time current_seconds
-		rcall display_additional
-
-	end_display_state0:
+	blinking_time current_hours
+	blinking_time current_minutes
+	blinking_time current_seconds
+	rcall display_additional
 	ret
 
 ; display hours blinking and the others static
 out_display_state1:
-	cpi timer_counter1, 1
-	brne out_display_s1_h
-	rcall display_two_empty_digits
-	rjmp out_display_s1_normal
-
-	out_display_s1_h:
-	display_time current_hours
-	
+	blinking_time current_hours
 	out_display_s1_normal:
 		display_time current_minutes
 		display_time current_seconds
 		rcall display_additional
-	end_out_display_state1:
 	ret
 
 ; display minutes blinking and the hour and minutes static
 out_display_state2:
 	display_time current_hours
-	cpi timer_counter1, 1
-	brne out_display_s2_m
-	rcall display_two_empty_digits
-	rjmp out_display_s2_normal
-
-	out_display_s2_m:
-		display_time current_minutes
-	
-	out_display_s2_normal:
-		display_time current_seconds
-		rcall display_additional
-	end_out_display_state2:
+	blinking_time current_minutes
+	display_time current_seconds
+	rcall display_additional
 	ret
 
 ; display seconds blinking and the other segments static
 out_display_state3:
 	display_time current_hours
 	display_time current_minutes
-
-	cpi timer_counter1, 1
-	brne out_display_s3_s
-	rcall display_two_empty_digits
-	rjmp out_display_s3_normal
-
-	out_display_s3_s:
-		display_time current_seconds
-	
-	out_display_s3_normal:
-		rcall display_additional
-	end_out_display_state3:
+	blinking_time current_seconds
+	rcall display_additional
 	ret
 	
 ; display the alarm hours blinking and the minutes static
 out_display_state4:
-	cpi timer_counter1, 1
-	brne out_display_s4_h
+	blinking_time alarm_hours
+	display_time alarm_minutes
 	rcall display_two_empty_digits
-	rjmp out_display_s4_normal
-
-	out_display_s4_h:
-		display_time alarm_hours
-	
-	out_display_s4_normal:
-		display_time alarm_minutes
-		rcall display_two_empty_digits
-		rcall display_additional
-	end_out_display_state4:
+	rcall display_additional
 	ret
 
 ; display the alarm minutes blinking and the hours static
 out_display_state5:
 	display_time alarm_hours
-	cpi timer_counter1, 1
-	brne out_display_s5_m
+	blinking_time alarm_minutes
 	rcall display_two_empty_digits
-	rjmp out_display_s5_normal
-
-	out_display_s5_m:
-		display_time alarm_minutes
-	
-	out_display_s5_normal:
-		rcall display_two_empty_digits
-		rcall display_additional
-	end_out_display_state5:
+	rcall display_additional
 	ret
 
 ; display the normal clock state
@@ -521,7 +429,7 @@ transmit:
 	out UDR, temp
 	ret
 
-; converts the number in temp to a binary 7 segment representation
+; converts the number in temp to a binary 7 segment representation and puts it back in temp
 convert_number:
 	check_0:
 		cpi temp, 0
@@ -577,80 +485,37 @@ convert_number:
 		ldi temp, 0b0111_0111
 		ret
 
-; manual time increment methods
-increment_hours:
-	inc current_hours
-	cpi current_hours, 24						; check for overflow
-	brne end_increment_hours
-	ldi current_hours, 0
-
-	end_increment_hours:
-	ret
-
-increment_minutes:
-	inc current_minutes
-	cpi current_minutes, 60						; check for overflow
-	brne end_increment_minutes
-	ldi current_minutes, 0
-
-	end_increment_minutes:
-	ret
-
-increment_seconds:
-	inc current_seconds
-	cpi current_seconds, 60						; check for overflow
-	brne end_increment_seconds
-	ldi current_seconds, 0
-
-	end_increment_seconds:
-	ret
-
-increment_alarm_hours:
-	inc alarm_hours
-	cpi alarm_hours, 24							; check for overflow
-	brne end_increment_alarm_hours
-	ldi alarm_hours, 0
-
-	end_increment_alarm_hours:
-	ret
-
-increment_alarm_minutes:
-	inc alarm_minutes
-	cpi alarm_minutes, 60						; check for overflow
-	brne end_increment_alarm_minutes
-	ldi alarm_minutes, 0
-
-	end_increment_alarm_minutes:
-	ret
-
 set_alarm:
-	sbr flags, (1 << 0)			; set the alarm bit in flags
+	sbr flags, (1 << 0)							; set the alarm bit in flags
 	ret
+
 unset_alarm:
-	cbr flags, (1 << 0)			; clear the alarm bit in flags
+	cbr flags, (1 << 0)							; clear the alarm bit in flags
 	ret
 
 run_alarm:
-	cp alarm_hours, current_hours	; check if alarm time and normal clock are equal (Hours)
+	cp alarm_hours, current_hours				; check if alarm time and normal clock are equal (Hours)
 	breq check_if_minutes_trigger
-	rjmp end_run_alarm
+	ret
 
 	check_if_minutes_trigger:
-		cp alarm_minutes, current_minutes ; check if alarm time and normal clock are equal (Minutes)
+		cp alarm_minutes, current_minutes		; check if alarm time and normal clock are equal (Minutes)
 		breq check_if_second_is_zero
-		rjmp end_run_alarm
+		ret
 
 		check_if_second_is_zero:
 			cpi current_seconds, 0
 			breq really_run_alarm
-			rjmp end_run_alarm
+			ret
 
 			really_run_alarm:
-				sbr flags, (1 << 3)	; Set the third bit in flags, this results in an alarm that goes off
-
-	end_run_alarm:			
-	ret
+				sbr flags, (1 << 3)				; Set the third bit in flags, this results in an alarm that goes off
+				ret
 
 stop_alarm:
-	cbr flags, (1 << 3)			; clear bit 3 in flags. this stops the alarm
+	cbr flags, (1 << 3)							; clear bit 3 in flags. this stops the alarm
+	ret
+
+; this is the end for every routine, the last place it is
+end_routine:
 	ret
