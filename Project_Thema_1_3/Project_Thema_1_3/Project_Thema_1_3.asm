@@ -75,7 +75,6 @@ rjmp tick
 .def flags = r26
 .def timer_counter1 = r27
 
-
 init:	; Set registers to 0x00
 	ldi alarm_hours, 0x00
 	ldi alarm_minutes, 0x00
@@ -102,14 +101,12 @@ init:	; Set registers to 0x00
 	ldi temp, (1 << URSEL) | (1 << UCSZ1) | (1 << UCSZ0)	; init UART
 	out UCSRC, temp							; init UART
 	
-	
 	ldi r16, (1<<INT1)|(1<<INT0)			; set all the interrupts
 	out GICR, r16							; set int0 and int1
 	
 	ldi r16, (1<<ISC00)|(1<<ISC01)|(1<<ISC10)|(1<<ISC11)	; set the edge on which the interrupt should trigger
 	out MCUCR, r16
 
-	
 	ldi r16, (1 << WGM12) | (1 << CS12) | (1 << CS10)		; set the prescaler to 1024, wgm, clock select
 	out TCCR1B, r16
 
@@ -122,10 +119,8 @@ init:	; Set registers to 0x00
 	ldi r16, (1 << OCIE1A)
 	out TIMSK, r16
 
-	
 	sei										; init interrupt flag in sreg
 
-	
 	ldi temp, 0b0000_1100					; Set lights indicating the buttons on
 	out DDRB, temp
 	ldi temp, 0b1111_0011
@@ -140,7 +135,6 @@ tick:										; TIMER1 interrupt
 	rcall display_state_manager
 	out SREG, sreg_state					; write it back to SREG
 	reti
-
 
 change_state:								; int0 interrupt, change to the next state
 	in sreg_state, SREG						; copy the SREG
